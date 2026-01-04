@@ -10,7 +10,41 @@ import numpy as np
 from stable_baselines3 import PPO
 from pathlib import Path
 
+class PredatorPolicy(nn.Module):
+    def __init__(self, input_dim=16, output_dim=5, hidden_dim=64):
+        super().__init__()
+        # Reproduit exactement SB3 policy
+        self.policy_net = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU()
+        )
+        self.action_net = nn.Linear(hidden_dim, output_dim)
 
+    def forward(self, x):
+        x = self.policy_net(x)
+        return self.action_net(x)
+    
+    def predict(self, observation, deterministic=True):
+        """
+        Simule la méthode SB3 .predict()
+        observation: np.array shape=(obs_dim,) ou (1, obs_dim)
+        deterministic: bool, ignoré ici car on prend argmax
+        """
+        obs = np.array(observation, dtype=np.float32)
+
+        if obs.ndim == 1:
+            obs = obs.reshape(1, -1)  # [1, obs_dim]
+
+        obs_tensor = torch.FloatTensor(obs)
+
+        with torch.no_grad():
+            logits = self.forward(obs_tensor)
+            action = torch.argmax(logits, dim=1).item()  # prend l'action max
+
+        return action, None
+    
 class StudentAgent:
     """
     Template agent class for Simple Tag competition.
@@ -26,9 +60,11 @@ class StudentAgent:
         # Example: Load your trained models
         # Get the directory where this file is located
         self.submission_dir = Path(__file__).parent
-        
-        model_path = self.submission_dir / "predator_model"
-        self.model = PPO.load(model_path)
+
+        model_path = self.submission_dir / "predator_model.pth"
+        self.model = PredatorPolicy(input_dim=16, output_dim=5)
+        self.model.load_state_dict(torch.load(model_path, map_location="cpu"))
+        self.model.eval()
         self.obs_pad = 16  
         pass
     
