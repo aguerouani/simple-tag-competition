@@ -23,7 +23,7 @@ class StudentAgent:
         Initialize your predator agent.
         """
         # Example: Load your trained models
-        # Get the directory where this file is located
+        # Get the directory where this file is locateds
         self.submission_dir = Path(__file__).parent
 
         model_path = self.submission_dir / "predator_model.pth"
