@@ -9,40 +9,7 @@ import torch.nn as nn
 import numpy as np
 from pathlib import Path
 
-class PredatorPolicy(nn.Module):
-    def __init__(self, input_dim=16, output_dim=5, hidden_dim=64):
-        super().__init__()
-        self.policy_net = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-        )
-        self.action_net = nn.Linear(hidden_dim, output_dim)
 
-    def forward(self, x):
-        x = self.policy_net(x)
-        return self.action_net(x)
-    
-    def predict(self, observation, deterministic=True):
-        """
-        Simule la méthode SB3 .predict()
-        observation: np.array shape=(obs_dim,) ou (1, obs_dim)
-        deterministic: bool, ignoré ici car on prend argmax
-        """
-        obs = np.array(observation, dtype=np.float32)
-
-        if obs.ndim == 1:
-            obs = obs.reshape(1, -1)  # [1, obs_dim]
-
-        obs_tensor = torch.FloatTensor(obs)
-
-        with torch.no_grad():
-            logits = self.forward(obs_tensor)
-            action = torch.argmax(logits, dim=1).item()  # prend l'action max
-
-        return action, None
-    
 class StudentAgent:
     """
     Template agent class for Simple Tag competition.
@@ -59,7 +26,7 @@ class StudentAgent:
         # Get the directory where this file is located
         self.submission_dir = Path(__file__).parent
 
-        model_path = self.submission_dir / "predator_model.pth"
+        model_path = self.submission_dir / "predator_model1.pth"
         self.model = PredatorPolicy(input_dim=16, output_dim=5)
         self.model.load_state_dict(torch.load(model_path, map_location="cpu"))
         self.model.eval()
@@ -121,32 +88,40 @@ class StudentAgent:
         pass
 
 
-# Example Neural Network Architecture (customize as needed)
-class ExampleNetwork(nn.Module):
-    """
-    Example neural network for the agent.
-    Students should replace this with their own architecture.
-    
-    For discrete action space:
-    - Input: observation (16 dims for prey, 14 dims for predator)
-    - Output: 5 action logits (for Discrete(5) action space)
-    """
-    
-    def __init__(self, input_dim, output_dim=5, hidden_dim=128):
-        super(ExampleNetwork, self).__init__()
-        self.network = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim),
+class PredatorPolicy(nn.Module):
+    def __init__(self, input_dim=16, output_dim=5):
+        super().__init__()
+        self.policy_net = nn.Sequential(
+            nn.Linear(input_dim, 256),
             nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
+            nn.Linear(256, 128),
             nn.ReLU(),
-            nn.Linear(hidden_dim, output_dim)
-            # No activation on output - these are logits for discrete actions
         )
-    
+        self.action_net = nn.Linear(128, output_dim)
+
     def forward(self, x):
-        return self.network(x)
+        x = self.policy_net(x)
+        return self.action_net(x)
+    
+    def predict(self, observation, deterministic=True):
+        """
+        Simule la méthode SB3 .predict()
+        observation: np.array shape=(obs_dim,) ou (1, obs_dim)
+        deterministic: bool, ignoré ici car on prend argmax
+        """
+        obs = np.array(observation, dtype=np.float32)
 
+        if obs.ndim == 1:
+            obs = obs.reshape(1, -1)  # [1, obs_dim]
 
+        obs_tensor = torch.FloatTensor(obs)
+
+        with torch.no_grad():
+            logits = self.forward(obs_tensor)
+            action = torch.argmax(logits, dim=1).item()  # prend l'action max
+
+        return action, None
+    
 if __name__ == "__main__":
     # Example usage
     print("Testing StudentAgent...")
